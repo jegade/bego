@@ -1,0 +1,3 @@
+[submodule "extra/pinmux"]
+	path = extra/pinmux
+	url = https://github.com/bradfa/beaglebone_pinmux_tables.git

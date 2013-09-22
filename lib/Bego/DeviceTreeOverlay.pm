@@ -142,7 +142,10 @@ sub remove_overlay {
 
     if ( my $slot = $self->_is_loaded($name) ) {
 
-        $self->_write_slots( "-" . $slot->{nr} );
+        if ( defined $slot->{nr} ) {
+
+            $self->_write_slots( "-" . $slot->{nr} );
+        }
     }
 }
 
