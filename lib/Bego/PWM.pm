@@ -97,7 +97,7 @@ sub set_duty {
 
     my $path = $self->path_for('duty');
 
-    open my $d, ">", $path or die $!;
+    open my $d, ">", $path or die $! . " ". $path;
     print $d $duty;
     close $d;
 
@@ -115,7 +115,7 @@ sub set_periode {
 
     my $path = $self->path_for('period');
 
-    open my $d, ">", $path or die $!;
+    open my $d, ">", $path or die $! . " ". $path;
     print $d $periode;
     close $d;
 
@@ -133,7 +133,7 @@ sub set_polarity {
 
     my $path = $self->path_for('polarity');
 
-    open my $d, ">", $path or die $!;
+    open my $d, ">", $path or die $! . " ". $path;
     print $d $polarity;
     close $d;
 
@@ -173,7 +173,8 @@ sub path_for {
 
     if ( defined $target ) { 
 
-        return sprintf("%s/%s", $base, $target);
+        my $full = sprintf("%s/%s", $base, $target);
+        return $full;
 
     } else {
 
