@@ -8,8 +8,6 @@ package Bego::PWM;
 use Bego::DeviceTreeOverlay;
 use Bego::GPIO;
 
-
-
 =head2 new
 
     Initialize 
@@ -18,14 +16,8 @@ use Bego::GPIO;
 
 sub new {
 
-    my ( $self, $options ) = @_;
+    my ($self) = @_;
 
-    # Load overlay for ic2
-    Bego::DeviceTreeOverlay->load_overlay('am33xx_pwm');
-
-
-
-    return bless $options;
 }
 
 =head2 start
@@ -34,22 +26,66 @@ sub new {
 
 =cut
 
-sub start {
+sub init {
 
-    my ( $self, $pin, $duty, $freq, $polarity) = @_;
+    my ( $package, $pin, $duty, $periode, $polarity ) = @_;
+
+    my $options = { pin => $pin };
+    my $self = bless $options;
+
+    # Load overlay for ic2
+    Bego::DeviceTreeOverlay->load_overlay('am33xx_pwm');
 
     # Set defaults
-    $duty       ||= 0;
-    $freq       ||= 2000;
-    $polarity   ||= 0;
+    $duty     ||= 0;
+    $periode  ||= 2000;
+    $polarity ||= 0;
 
-    # Check if 
-    $self->_check_pin( $pin);
+    # Check if
+    $self->_check_pin;
 
-    #
+    # Load overlay
+    $self->load_pin_overlay;
 
+    $self->set_periode($periode);
+    $self->set_duty($duty);
+    $self->set_polarity($polarity);
+
+    return $self;
 
 }
+
+=hea2 start 
+
+=cut
+
+sub start {
+
+    my ( $self ) = @_;
+
+    my $path = $self->path_for('run');
+
+    open my $d, ">", $path or die $!;
+    print $d 1;
+    close $d;
+
+    return $self;
+
+}
+
+sub stop {
+    
+    my ( $self ) = @_;
+    
+    my $path = $self->path_for('run');
+
+    open my $d, ">", $path or die $!;
+    print $d 0;
+    close $d;
+
+    return $self;
+}
+
 
 =head2 set_duty
 
@@ -57,39 +93,100 @@ sub start {
 
 sub set_duty {
 
-    my ( $self, $pin ) = @_;
+    my ( $self, $duty ) = @_;
 
+    my $path = $self->path_for('duty');
 
+    open my $d, ">", $path or die $!;
+    print $d $duty;
+    close $d;
+
+    return $self;
 }
 
-=head2 set_frequency
+=head2 set_periode
 
 =cut
 
-sub set_frequency {
+sub set_periode {
 
-    my ( $self, $pin, $freq) = @_;
+    my ( $self, $periode ) = @_;
 
 
+    my $path = $self->path_for('period');
 
+    open my $d, ">", $path or die $!;
+    print $d $periode;
+    close $d;
+
+    return $self;
 
 }
 
-=head2 set_direction
+=head2 set_polarity
 
 =cut
 
-sub set_direction {
+sub set_polarity {
 
-    my ( $self, $pin, $direction ) = @_;
+    my ( $self, $polarity ) = @_;
+
+    my $path = $self->path_for('polarity');
+
+    open my $d, ">", $path or die $!;
+    print $d $polarity;
+    close $d;
+
+    return $self;
+
+}
+
+sub path_for {
+
+    my ( $self, $target ) = @_;
+
+    my $pin = $self->{pin};
+
+    my $base = $self->{base};
+
+    if ( defined $base && -e $base ) { 
+
+    } else { 
+
+        foreach my $c ( 0..100) {
+
+            my $check = sprintf("/sys/devices/ocp.2/pwm_test_%s.%i", $pin, $c);
+
+            if ( -e $check ) {
+
+                $self->{base} = $check;
+                $base = $check;
+                last;
+            }
+        }
+    }
+    
+    if ( !defined $base ) {
+
+        warn "Could not start $pin\n";
+    }
+
+    if ( defined $target ) { 
+
+        return sprintf("%s/%s", $base, $target);
+
+    } else {
+
+        return $base;
+    }
 
 }
 
 sub _check_pin {
 
-    my ( $self, $pin ) = @_;
+    my ($self) = @_;
 
-    return 1 if $self->{state}{$pin};
+    my $pin = $self->{pin};
 
     my $pins = {
 
@@ -111,8 +208,6 @@ sub _check_pin {
 
     if ( exists $pins->{$pin} ) {
 
-        $self->{state}{$pin} = "running";
-
         return 1;
 
     } else {
@@ -120,21 +215,19 @@ sub _check_pin {
         die "Unknown pin $pin";
     }
 
-
 }
 
-sub stop {
+sub cleanup {
 
-    my ( $self, $pin ) = @_;
+    my ($self) = @_;
 
-    if ( exists $self->{state}{$pin} ) {
+    if ( $self->path_for && -e $self->path_for ) {
 
-        $self->set_duty( $pin, 0 );
-        $self->set_frequency( 2000);
-        $self->set_direction( 0);
+        $self->set_duty(0);
+        $self->set_periode(2000);
+        $self->set_polarity(0);
 
-        delete $self->{state}{$pin};
-        $self->unload_pin_overlay( $pin );
+        $self->unload_pin_overlay;
 
         return 1;
 
@@ -144,7 +237,6 @@ sub stop {
     }
 }
 
-
 =head2 load_pin_overlay
     
     
@@ -152,8 +244,9 @@ sub stop {
 
 sub load_pin_overlay {
 
-    my ( $self, $pin ) = @_;
-    return Bego::DeviceTreeOverlay->load_overlay('bone_pwm_'.$pin);
+    my ($self) = @_;
+    my $pin = $self->{pin};
+    return Bego::DeviceTreeOverlay->load_overlay( 'bone_pwm_' . $pin );
 
 }
 
@@ -163,21 +256,22 @@ sub load_pin_overlay {
 
 sub unload_pin_overlay {
 
-    my ( $self, $pin ) = @_;
-    return Bego::DeviceTreeOverlay->remove_overlay('bone_pwm_'.$pin);
+    my ($self) = @_;
+    my $pin = $self->{pin};
+    return Bego::DeviceTreeOverlay->remove_overlay( 'bone_pwm_' . $pin );
 }
-
 
 =head2 DESTROY
 
-    Remove Overlay
+    Stop and remove Overlay
 
 =cut
 
 sub DESTROY {
 
-    Bego::DeviceTreeOverlay->remove_overlay('BB-I2C1A1');
-    
+    my $self = shift;
+    $self->cleanup;
+    print STDERR "- Unloading ".$self->{pin}."\n";
 }
 
 1;

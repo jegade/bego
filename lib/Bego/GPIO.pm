@@ -146,7 +146,7 @@ sub path_for {
 
     }
 
-    die unless exists $pins->{$pin};
+    die "Could not found $pin" unless exists $pins->{$pin};
 
     my $basepath = sprintf("/sys/class/gpio/gpio%i",$pins->{$pin});
 
