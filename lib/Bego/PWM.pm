@@ -47,10 +47,6 @@ sub init {
     # Load overlay
     $self->load_pin_overlay;
 
-    $self->set_periode($periode);
-    $self->set_duty($duty);
-    $self->set_polarity($polarity);
-
     return $self;
 
 }
@@ -61,9 +57,14 @@ sub init {
 
 sub start {
 
-    my ( $self ) = @_;
+    my ( $self, $duty, $periode, $polarity ) = @_;
 
     my $path = $self->path_for('run');
+
+    $self->set_periode($periode);
+    $self->set_duty($duty);
+    $self->set_polarity($polarity);
+
 
     open my $d, ">", $path or die $!;
     print $d 1;
