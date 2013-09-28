@@ -16,6 +16,8 @@ use Bego::GPIO;
 use Bego::PWM;
 use Bego::I2C;
 
+my $i2c = Bego::I2C->new;
+my $dev = $i2c->dev;
 
 
 my $direction_pwm1 = Bego::GPIO->init("GPIO2_23",'out');    # P8_29
@@ -35,20 +37,12 @@ my $pwm6 = Bego::PWM->init("P8_46");   # ehrpwm2b
 
 print STDERR "Initalized, ready \n";
 
-$pwm1->set_periode(500000);
-$pwm2->set_periode(500000);
-$pwm3->set_periode(500000);
-$pwm4->set_periode(500000);
-$pwm5->set_periode(500000);
-$pwm6->set_periode(500000);
-
 $pwm1->start(0,500000,1);
 $pwm2->start(0,500000,1);
 $pwm3->start(0,500000,1);
 $pwm4->start(0,500000,1);
 $pwm5->start(0,500000,1);
 $pwm6->start(0,500000,1);
-
 
 
 foreach my $x ( 1 .. 10 ) {
